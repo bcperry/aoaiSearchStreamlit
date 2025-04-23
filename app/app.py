@@ -8,7 +8,7 @@ load_dotenv()
 
 
 
-st.title('Azure OpenAI On Your Data with Streamlit')
+st.title(f'Azure OpenAI On Your Data with Streamlit: chatting with {os.environ["AZURE_OPENAI_MODEL"]}')
 
 token_provider = get_bearer_token_provider(
     DefaultAzureCredential(),
@@ -16,6 +16,7 @@ token_provider = get_bearer_token_provider(
 )
 client = AzureOpenAI(
                 azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+                azure_deployment=os.environ["AZURE_OPENAI_MODEL"],
                 api_key=os.environ["AZURE_OPENAI_API_KEY"],
                 api_version=os.environ["OPENAI_API_VERSION"])
 
@@ -30,14 +31,14 @@ if prompt := st.chat_input('What is up?'):
     st.chat_message('user').write(prompt)
 
     stream = client.chat.completions.create(
-        model='gpt-4o',
+        model=os.environ["AZURE_OPENAI_MODEL"],
         messages=st.session_state.messages,
         stream=True,
         extra_body={
             'data_sources': [{
                 'type': 'azure_search',
                 'parameters': {
-                    'endpoint': os.getenv('AZURE_SEARCH_ENDPOINT'),
+                    'endpoint': os.environ['AZURE_SEARCH_ENDPOINT'],
                     'index_name': 'vector-index',
                     'semantic_configuration': 'default',
                     'query_type': 'vector_semantic_hybrid',
@@ -54,3 +55,11 @@ if prompt := st.chat_input('What is up?'):
     )
     response = st.chat_message('ai').write_stream(stream)
     st.session_state.messages.append({'role': 'assistant', 'content': response})
+
+# # Add a navigation menu
+# page = st.sidebar.selectbox("Select a page", ["Chat", "Deployment Info"])
+
+# if page == "Chat":
+#     pass
+# elif page == "Deployment Info":
+#     show_deployment_info()
