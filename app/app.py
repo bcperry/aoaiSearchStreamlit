@@ -54,6 +54,5 @@ if prompt := st.chat_input('Ask me about your data'):
     )
 
     response = st.chat_message('ai').write_stream(stream)
-    st.write(response)
     st.session_state.messages.append({'role': 'assistant', 'content': response})
 
