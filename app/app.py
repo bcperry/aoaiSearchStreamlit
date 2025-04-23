@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
+st.set_page_config(page_title="Azure OpenAI RAG Chat", page_icon=":robot:")
 
 st.title(f'Azure OpenAI On Your Data with Streamlit: chatting with {os.environ["AZURE_OPENAI_MODEL"]}')
 
@@ -26,7 +26,7 @@ if 'messages' not in st.session_state:
 for message in st.session_state.messages:
     st.chat_message(message['role']).write(message['content'])
 
-if prompt := st.chat_input('What is up?'):
+if prompt := st.chat_input('Ask me about your data'):
     st.session_state.messages.append({'role': 'user', 'content': prompt})
     st.chat_message('user').write(prompt)
 
@@ -56,10 +56,3 @@ if prompt := st.chat_input('What is up?'):
     response = st.chat_message('ai').write_stream(stream)
     st.session_state.messages.append({'role': 'assistant', 'content': response})
 
-# # Add a navigation menu
-# page = st.sidebar.selectbox("Select a page", ["Chat", "Deployment Info"])
-
-# if page == "Chat":
-#     pass
-# elif page == "Deployment Info":
-#     show_deployment_info()
