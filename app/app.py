@@ -8,8 +8,7 @@ load_dotenv()
 
 st.set_page_config(page_title="Azure OpenAI RAG Chat", page_icon=":robot:")
 
-st.title(f'Azure OpenAI On Your Data with Streamlit: chatting with {os.environ["AZURE_OPENAI_MODEL"]}')
-
+st.title(f'Azure OpenAI On Your Data with Streamlit')
 token_provider = get_bearer_token_provider(
     DefaultAzureCredential(),
     "https://cognitiveservices.azure.us/.default"
@@ -53,6 +52,8 @@ if prompt := st.chat_input('Ask me about your data'):
             }]
         }
     )
+
     response = st.chat_message('ai').write_stream(stream)
+    st.write(response)
     st.session_state.messages.append({'role': 'assistant', 'content': response})
 
