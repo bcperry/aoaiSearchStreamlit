@@ -1,6 +1,8 @@
-name: on-your-data-with-streamlit
+name: azure-openai-rag-for-sovereign-cloud
+cloud: 
+  name: AzureUSGovernment
 metadata:
-  template: on-your-data-with-streamlit@0.0.1-beta
+  template: azure-openai-rag-for-sovereign-cloud@0.0.1-beta
 services:
   web:
     project: ./app

@@ -9,6 +9,12 @@ param tags object
 
 param principalId string
 
+param modelname string = 'gpt-4o-mini'
+
+param modelAPIVersion string = '2024-02-15-preview'
+
+param aiSearchIndexName string = 'index'
+
 var abbrs = loadJsonContent('./abbreviations.json')
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
@@ -31,7 +37,7 @@ resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/container
 
 resource azureOpenAI 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = {
   name: '${abbrs.cognitiveServicesAccounts}${resourceToken}'
-  location: 'eastus2'
+  location: 'usgovarizona'
   kind: 'OpenAI'
   sku: {
     name: 'S0'
@@ -46,9 +52,9 @@ resource azureOpenAI 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' =
 
 var deployments = [
   {
-    name: 'gpt-4o'
-    skuName: 'GlobalStandard'
-    modelVersion: '2024-05-13'
+    name: modelname
+    skuName: 'Standard'
+    modelVersion: '2024-07-18'
   }
   {
     name: 'text-embedding-ada-002'
@@ -166,77 +172,76 @@ resource roleAssignmentStorageBlobContributor 'Microsoft.Authorization/roleAssig
   }
 }
 
-resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
-  name: 'script-${resourceToken}'
-  location: resourceGroup().location
-  kind: 'AzurePowerShell'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${userAssignedIdentity.id}': {}
-    }
-  }
-  properties: {
-    azPowerShellVersion: '3.0'
-    arguments: '-resourceGroupName ${resourceGroupName} -storageAccountName ${storageAccount.name} -storageAccountId ${storageAccount.id} -azureOpenAIName ${azureOpenAI.name} -aoaiKey ${azureOpenAI.listKeys().key1} -azureAISearchName ${azureAISearch.name}'
-    scriptContent: '''
-      param (
-        [string]$resourceGroupName,
-        [string]$storageAccountName,
-        [string]$storageAccountId,
-        [string]$azureOpenAIName,
-        [string]$aoaiKey,
-        [string]$azureAISearchName
-      )
+// resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
+//   name: 'script-${resourceToken}'
+//   location: resourceGroup().location
+//   kind: 'AzurePowerShell'
+//   identity: {
+//     type: 'UserAssigned'
+//     userAssignedIdentities: {
+//       '${userAssignedIdentity.id}': {}
+//     }
+//   }
+//   properties: {
+//     azPowerShellVersion: '3.0'
+//     arguments: '-resourceGroupName ${resourceGroupName} -storageAccountName ${storageAccount.name} -storageAccountId ${storageAccount.id} -azureOpenAIName ${azureOpenAI.name} -aoaiKey ${azureOpenAI.listKeys().key1} -azureAISearchName ${azureAISearch.name}'
+//     scriptContent: '''
+//       param (
+//         [string]$resourceGroupName,
+//         [string]$storageAccountName,
+//         [string]$storageAccountId,
+//         [string]$azureOpenAIName,
+//         [string]$aoaiKey,
+//         [string]$azureAISearchName
+//       )
       
-      Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/charliewei0716/on-your-data-with-streamlit/main/data/employee_handbook.pdf' -OutFile 'employee_handbook.pdf'
-      $storageAccount = Get-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccountName
-      Set-AzStorageBlobContent -File 'employee_handbook.pdf' -Container 'data' -Blob 'employee_handbook.pdf' -Context $storageAccount.Context
-      $uri = "https://${azureOpenAIName}.openai.azure.com/openai/ingestion/jobs/data?api-version=2024-05-01-preview"
-      $headers = @{'api-key' = $aoaiKey}
-      $body = @{
-        kind = "SystemCompute"
-        searchServiceConnection = @{
-          kind = "EndpointWithManagedIdentity"
-          endpoint = "https://${azureAISearchName}.search.windows.net"
-        }
-        datasource = @{
-          kind = "Storage"
-          containerName = "data"
-          chunkingSettings = @{
-            maxChunkSizeInTokens = 1024
-          }
-          storageAccountConnection = @{
-            kind = "EndpointWithManagedIdentity"
-            endpoint = "https://${storageAccountName}.blob.core.windows.net/"
-            resourceId = "ResourceId=${storageAccountId}"
-          }
-          embeddingsSettings = @(
-            @{
-              embeddingResourceConnection = @{
-                kind = "RelativeConnection"
-              }
-              modelProvider = "AOAI"
-              deploymentName = "text-embedding-ada-002"
-            }
-          )
-        }
-        dataRefreshIntervalInHours = 24
-        completionAction = "keepAllAssets"
-      } | ConvertTo-Json -Depth 5
+
+//       $uri = "https://${azureOpenAIName}.openai.azure.com/openai/ingestion/jobs/data?api-version=2024-05-01-preview"
+//       $headers = @{'api-key' = $aoaiKey}
+//       $body = @{
+//         kind = "SystemCompute"
+//         searchServiceConnection = @{
+//           kind = "EndpointWithManagedIdentity"
+//           endpoint = "https://${azureAISearchName}.search.azure.us"
+//         }
+//         datasource = @{
+//           kind = "Storage"
+//           containerName = "data"
+//           chunkingSettings = @{
+//             maxChunkSizeInTokens = 1024
+//           }
+//           storageAccountConnection = @{
+//             kind = "EndpointWithManagedIdentity"
+//             endpoint = "https://${storageAccountName}.blob.core.windows.net/"
+//             resourceId = "ResourceId=${storageAccountId}"
+//           }
+//           embeddingsSettings = @(
+//             @{
+//               embeddingResourceConnection = @{
+//                 kind = "RelativeConnection"
+//               }
+//               modelProvider = "AOAI"
+//               deploymentName = "text-embedding-ada-002"
+//             }
+//           )
+//         }
+//         dataRefreshIntervalInHours = 24
+//         completionAction = "keepAllAssets"
+//       } | ConvertTo-Json -Depth 5
        
-      Invoke-RestMethod -Uri $uri -Headers $headers -Method Put -Body $body -ContentType 'application/json'
-    '''
-    retentionInterval: 'PT1H'
-  }
-  dependsOn: [
-    searchIndexDataReader
-    searchServiceContributor
-    storageBlobDataContributor
-    cognitiveServicesOpenAIContributor
-    storageBlobDataReader
-  ]
-}
+//       Invoke-RestMethod -Uri $uri -Headers $headers -Method Put -Body $body -ContentType 'application/json'
+//     '''
+//     retentionInterval: 'PT1H'
+//   }
+//   dependsOn: [
+//     searchIndexDataReader
+//     searchServiceContributor
+//     storageBlobDataContributor
+//     cognitiveServicesOpenAIContributor
+//     storageBlobDataReader
+//   ]
+// }
+
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: '${abbrs.webServerFarms}${resourceToken}'
@@ -271,8 +276,13 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
     name: 'appsettings'
     properties: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
-      AZURE_OPENAI_ENDPOINT: 'https://${azureOpenAI.name}.openai.azure.com/'
-      AZURE_SEARCH_ENDPOINT: 'https://${azureAISearch.name}.search.windows.net'
+      AZURE_OPENAI_ENDPOINT: 'https://${azureOpenAI.name}.openai.azure.us/'
+      AZURE_SEARCH_ENDPOINT: 'https://${azureAISearch.name}.search.azure.us'
+      AZURE_OPENAI_MODEL: modelname
+      AZURE_OPENAI_DEPLOYMENT_NAME: modelname
+      OPENAI_API_VERSION: modelAPIVersion
+      AZURE_OPENAI_API_KEY: azureOpenAI.listKeys().key1
+      AZURE_SEARCH_INDEX: aiSearchIndexName
     }
   }
 }
@@ -297,5 +307,5 @@ resource cognitiveServicesOpenAIUserForAppService 'Microsoft.Authorization/roleA
   }
 }
 
-output AZURE_OPENAI_ENDPOINT string = 'https://${azureOpenAI.name}.openai.azure.com/'
-output AZURE_SEARCH_ENDPOINT string = 'https://${azureAISearch.name}.search.windows.net'
+output AZURE_OPENAI_ENDPOINT string = 'https://${azureOpenAI.name}.openai.azure.us/'
+output AZURE_SEARCH_ENDPOINT string = 'https://${azureAISearch.name}.search.azure.us'
