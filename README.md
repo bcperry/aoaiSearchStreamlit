@@ -19,9 +19,7 @@ This repository leverages Azure OpenAI's [built in RAG capability](https://learn
     azd up
     ```
     - Enter the environment name, Azure Subscription, and the location of the Azure resources one by one as instructed.
-    - This process involves uploading the test document `./data/employee_handbook.pdf` to an Azure Storage Account and triggering the **Ingestion Jobs** task within **On Your Data**.
-   
-   ![Deploy](assets/deploy.png)
+
 
 4. Setting Up a Python development environment and running web application:
     ```
